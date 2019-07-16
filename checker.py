@@ -1,3 +1,4 @@
+# Checker v2.0
 import json
 import time
 from threading import Thread, Timer

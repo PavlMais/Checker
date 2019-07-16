@@ -1,1 +1,4 @@
 config_loc.py
+__pycache__/
+
+.vscode/
