@@ -8,7 +8,10 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram import Client, MessageHandler, Filters
 
 import data_base as db
-import config
+try:
+    import config_loc as config
+except ImportError:
+    import config
 
 
 
@@ -108,15 +111,19 @@ class Checker(object):
 
     def _loop(self):
         self.bots_queue = db.get_bots_ids()
+        if len(self.bots_queue) == 0:
+            return
+        bot_wait = 60 / len(self.bots_queue)
 
         print('--------------------------------------------')
-        print('[Checker] Start loop all bots: ', len(self.bots_queue))
+        print('[Checker] Start loop all bots: ', len(self.bots_queue), '  wait bot: ', bot_wait)
         print('[Checker] All bots: ', self.bots_queue)
         print('--------------------------------------------')
 
+
         for i, (bot_username, bot_id) in enumerate(self.bots_queue):
             self.send_start(bot_username = bot_username, bot_id = bot_id, id = i)
-            time.sleep(config.SLEEP_QUEUE)
+            time.sleep(bot_wait)
 
 
     def send_start(self, bot_id, bot_username = None, id = None):

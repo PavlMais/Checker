@@ -1,7 +1,10 @@
 import psycopg2
 from datetime import datetime
 
-import config
+try:
+    import config_loc as config
+except ImportError:
+    import config
 
 db = psycopg2.connect(config.DB_URL)
 
