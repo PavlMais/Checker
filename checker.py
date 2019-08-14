@@ -61,23 +61,32 @@ class Queue(object):
 
     def new(self, bot_id):
         print('[Queue] Create new item id:', bot_id)
-        self.items[bot_id] = time.time()
+        self.items[bot_id] = {
+            'time_send':time.time(),
+            'is_answered':False
+            }
         self.timers.new(bot_id)
 
 
     def receive(self, bot_id):
         print('[Queue] receiv item id: ', bot_id)
         try:
-            time_create = self.items.pop(bot_id)
+            info = self.items[bot_id]
         except KeyError:
-            return False
+            return None
         else:
-            self.timers.remove(bot_id)
-            return time.time() - time_create
+            return info
 
 
     def _timer_handler(self, bot_id):
-        print('[Queue] Call not work hadler ')
+        print('[Queue] Call time hadler ')
+
+        if self.items[bot_id]['is_answered']:
+            del self.items[bot_id]
+            
+            return
+
+
         del self.items[bot_id]
 
         self.callback_notwork(bot_id)
@@ -112,6 +121,7 @@ class Checker(object):
     def _loop(self):
         self.bots_queue = db.get_bots_ids()
         if len(self.bots_queue) == 0:
+            print('no bots to check')
             return
         bot_wait = 60 / len(self.bots_queue)
 
@@ -141,19 +151,40 @@ class Checker(object):
 
 
     def _bot_handler(self, cli, msg):
-
-        print('[Checker] Get msg from:', msg.from_user.id,)
-
         bot_id = msg.from_user.id
 
-        time_wait = self.queue.receive(bot_id)
+        print('[Checker] Get msg from:', msg.from_user.username)
 
-        if time_wait is False:
-            print('[Checker] Get msg from:', msg.from_user.username, ' no find in queue')
 
-            return 
+        info = self.queue.receive(bot_id)
 
-        db.set_time_wait(bot_id, time_wait)
+        if info:
+            if info['is_answered']: # second< msg from bot
+                print('receive two+ msgs')
+                return
+            else: # first msg from bot
+                print('norm msg set time wait')
+                info['is_answered'] = True
+                time_wait = time.time() - info['time_send']
+                db.set_time_wait(bot_id, time_wait)
+        
+        else: # msg from no handle bot
+            print('bot no handle')
+            bot_status = db.get_status(bot_id)
+            print(bot_status)
+            if  bot_status == 'not_work': # bot start work (maybe)
+                print('retry check')
+                self.send_start(bot_id, msg.from_user.username)
+            else: # bot spam 
+                print('spam')
+                return
+
+
+
+
+
+
+
 
 
     def not_work_handler(self, bot_id):
@@ -191,4 +222,5 @@ class Checker(object):
 cli.start()
 
 Checker(bot, cli)
+cli.idle()
 

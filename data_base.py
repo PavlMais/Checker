@@ -23,12 +23,18 @@ def get_creator(bot_id):
             cur.execute("SELECT creator, username FROM bots WHERE id = %s;", (bot_id,)) 
             return cur.fetchone()
 
+def get_status(bot_id):
+    with db:
+        with db.cursor() as cur:
+            cur.execute("SELECT status FROM bots WHERE id = %s;", (bot_id,))
+            return cur.fetchone()[0]
+
 def set_time_wait(bot_id, time_wait):
     print('[DB] set time wait')
     with db:
         with db.cursor() as cur:
             cur.execute("""
-                UPDATE bots SET waiting_time = %s, last_update = NOW() WHERE id = %s;
+                UPDATE bots SET waiting_time = %s, last_update = NOW(), status = 'checking' WHERE id = %s;
                 INSERT INTO bot_check_stat (time_wait, bot_id) Values (%s, %s);
                 """,
                 (time_wait,  bot_id, time_wait,  bot_id)
