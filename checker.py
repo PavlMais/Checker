@@ -1,6 +1,7 @@
 # Checker v2.0
 import json
 import time
+from datetime import datetime
 from threading import Thread, Timer
 
 from telebot import TeleBot
@@ -57,6 +58,7 @@ class Queue(object):
         self.timers = Timers(self._timer_handler)   
         self.items = {}
         self.callback_notwork = callback_notwork
+    
 
 
     def new(self, bot_id):
@@ -113,6 +115,8 @@ class Checker(object):
 
         self._main_loop()
 
+        self.stats = []
+
     def _main_loop(self):
         while True:
             self._loop()
@@ -123,17 +127,42 @@ class Checker(object):
         if len(self.bots_queue) == 0:
             print('no bots to check')
             return
-        bot_wait = 60 / len(self.bots_queue)
-
+        all_bots = len(self.bots_queue)
+        bot_wait = 60 / all_bots
+        self.stats = []
         print('--------------------------------------------')
         print('[Checker] Start loop all bots: ', len(self.bots_queue), '  wait bot: ', bot_wait)
         print('[Checker] All bots: ', self.bots_queue)
         print('--------------------------------------------')
 
+        start_time = time.time()
 
         for i, (bot_username, bot_id) in enumerate(self.bots_queue):
             self.send_start(bot_username = bot_username, bot_id = bot_id, id = i)
             time.sleep(bot_wait)
+        
+        
+        time_loop = time.time() - start_time
+
+        sum_tw = 0
+        work_bots = 0
+        for tw in self.stats:
+            if tw:
+                sum_tw += tw
+                work_bots += 1
+
+        avg_tw = float(sum_tw / work_bots)
+        
+
+
+
+
+
+
+
+        print('Time loop: ', time_loop)
+
+        db.stats_loop_check(time_loop, all_bots, work_bots, avg_tw)
 
 
     def send_start(self, bot_id, bot_username = None, id = None):
@@ -166,11 +195,15 @@ class Checker(object):
                 print('norm msg set time wait')
                 info['is_answered'] = True
                 time_wait = time.time() - info['time_send']
+                self.stats.append(time_wait)
                 db.set_time_wait(bot_id, time_wait)
         
         else: # msg from no handle bot
             print('bot no handle')
-            bot_status = db.get_status(bot_id)
+            try:
+                bot_status = db.get_status(bot_id)
+            except Exception:
+                return
             print(bot_status)
             if  bot_status == 'not_work': # bot start work (maybe)
                 print('retry check')
@@ -189,6 +222,7 @@ class Checker(object):
 
     def not_work_handler(self, bot_id):
         print('[Checker] send not work')
+        self.stats.append(False)
         db.set_not_work(bot_id)
         creator_id, bot_username = db.get_creator(bot_id)
         try:
@@ -223,4 +257,5 @@ cli.start()
 
 Checker(bot, cli)
 cli.idle()
+
 

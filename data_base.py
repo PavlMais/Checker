@@ -40,7 +40,17 @@ def set_time_wait(bot_id, time_wait):
                 (time_wait,  bot_id, time_wait,  bot_id)
             )
 
-            
+def stats_loop_check(time_loop, checked_bots, work_bots, avg_tw):
+    with db:
+        with db.cursor() as cur:
+            cur.execute(
+    "INSERT INTO stats_loop_check (time_loop, checked_bots, avg_tw, workers_bots) VALUES (%s, %s, %s, %s);",
+    (time_loop, checked_bots, avg_tw, work_bots))
+                
+
+        
+
+
 
 def set_not_work(bot_id):
     with db:
